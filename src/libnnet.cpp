@@ -253,6 +253,14 @@ std::vector<float> Neuron::getInputValues() {
     return result;
 }
 
+std::vector<float> Neuron::getWeights() {
+    std::vector<float> result;
+    for(unsigned int i=0; i<inputs.size(); i++) {
+        result.push_back(inputs[i].getWeight() );
+    }
+    return result;
+}
+
 InputLayer::InputLayer() {
 
 }
@@ -281,6 +289,14 @@ void NLayer::back() {
     for (unsigned int i = 0; i < layer.size(); i++) {
         layer[i]->back();
     }
+}
+
+std::vector<std::vector<float> > NLayer::getWeights() {
+    std::vector<std::vector<float> > result;
+    for(auto& neuron: layer) {
+	result.push_back(neuron->getWeights() );
+    }
+    return result;
 }
 
 std::vector<std::shared_ptr<Neuron> >* NLayer::getLayer() {
@@ -323,6 +339,8 @@ LayerLinkIndexes HiddenLayer::link(std::shared_ptr<NLayer> upperLayer, LinkMetho
             return link(upperLayer, methodAllCombinations);
         case EVERY_COMBINATION_OF_TWO:
             return link(upperLayer, methodEveryCombinationOfTwo);
+        case ONE_SELECTED_AND_ONE_RANDOM:
+            return link(upperLayer, methodOneSelectedAndOneRandom);
         default:
             return std::vector<std::vector<int> >();
     }
@@ -356,21 +374,25 @@ OutputLayer::OutputLayer(int numOfInputs) {
     }
 }
 
-void OutputLayer::link(std::shared_ptr<NLayer> upperLayer, void*(*method)(std::shared_ptr<NLayer>)) {
-    method(upperLayer);
+LayerLinkIndexes OutputLayer::link(std::shared_ptr<NLayer> upperLayer, LayerLinkIndexes(*method)(std::shared_ptr<NLayer>)) {
+    return method(upperLayer);
 }
 
-void OutputLayer::link(std::shared_ptr<NLayer> upperLayer) {
+LayerLinkIndexes OutputLayer::link(std::shared_ptr<NLayer> upperLayer) {
+    LayerLinkIndexes result;
     std::vector<std::shared_ptr<Neuron> > linkableNeurons;
     for (unsigned int j = 0; j < layer.size(); j++) {
         linkableNeurons.clear();
+        
+        std::vector<int> links;
         for (unsigned int i = 0; i < upperLayer->layer.size(); i++) {
-            if ((int) i % layer.size() == j) {
-                linkableNeurons.push_back(upperLayer->layer[i]);
-            }
+            linkableNeurons.push_back(upperLayer->layer[i]);
+            links.push_back(i);
         }
+        result.push_back(links);
         layer[j]->addInputs(linkableNeurons);
     }
+    return result;
 }
 
 NNet::NNet() {
@@ -461,34 +483,39 @@ LayerLinkIndexes NNet::linkHidden(int layerDepth, int numOfNeurons) {
 
     if (layerDepth <= 1) {
         result = hiddenLayers[0]->link(inputLayer, numOfNeurons);
+        hiddenLayers[0]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     } else {
         result = hiddenLayers[layerDepth - 1]->link(hiddenLayers[layerDepth - 2], numOfNeurons);
+        hiddenLayers[layerDepth-1]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     }
-    hiddenLayers[0]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     return result;
 
 
 }
 
-void NNet::linkOutput() {
-    outputLayer->link(hiddenLayers.back());
+LayerLinkIndexes NNet::linkOutput() {
+    LayerLinkIndexes result = outputLayer->link(hiddenLayers.back());
     outputLayer->setLearningRate(min);
+    return result;
 }
 
-void NNet::linkOutput(void* (*method)(std::shared_ptr<NLayer> _upLayer)) {
+LayerLinkIndexes NNet::linkOutput(LayerLinkIndexes (*method)(std::shared_ptr<NLayer> _upLayer)) {
     if (hiddenLayers.empty()) {
         std::cerr << "HiddenLayer: no hidden layers found.\n";
-        return;
+        return LayerLinkIndexes();
     }
     if (!outputLayer) {
         std::cerr << "outputLayer: no output layer found.\n";
-        return;
+        return LayerLinkIndexes();
     }
-    outputLayer->link(hiddenLayers.back(), method);
+    LayerLinkIndexes result = outputLayer->link(hiddenLayers.back(), method);
+    return result;
 }
 
 std::vector<std::shared_ptr<float> > NNet::getOutputSignals() {
     std::vector<std::shared_ptr<float> > result;
+    
+    //for each neuron in the output layer, push its output signal to result
     for (auto& neuron : (*outputLayer->getLayer())) {
         result.push_back(neuron->getOutputSignal());
     }
@@ -497,10 +524,20 @@ std::vector<std::shared_ptr<float> > NNet::getOutputSignals() {
 
 std::vector<float> NNet::getSums() {
     std::vector<float> result;
-    for (auto& neuron : (*outputLayer->getLayer())) {
-        result.push_back(neuron->getSum());
+    for (auto& neuron : ( *outputLayer->getLayer() )) {
+        result.push_back(neuron->getSum() );
     }
     return result;
+}
+
+std::vector<std::vector<float> > NNet::getWeights (int depth) {
+    if(depth <= 0) {
+       return inputLayer->getWeights();
+    } else if (depth <= hiddenLayers.size()) {
+       return hiddenLayers[depth - 1]->getWeights();
+    } else {
+       return outputLayer->getWeights();
+    }
 }
 
 void NNet::setLearningcurve(float _curve, float _min, float _max) {
@@ -532,7 +569,7 @@ void NNet::back(std::vector<float> desiredOut) {
     for (int i = hiddenLayers.size() - 1; i >= 0; i--) {
         hiddenLayers[i]->back();
     }
-    inputLayer->back();
+    //  inputLayer->back();
 
 }
 

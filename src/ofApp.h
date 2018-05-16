@@ -32,6 +32,13 @@ class ofApp : public ofBaseApp{
     const int RECEIVE_PORT = 12346;
     const int MAX_PACKET_SIZE = 100000;
     
+    unsigned int N_outputs = 1; //number of outputs
+    unsigned int N_hiddenLayers = 2; //number of hidden layers
+    unsigned int N_inputs = 2; //number of inputs
+    unsigned int hiddenLayerSize = 5; //number of neurons in hidden layers
+    
+    std::vector<LayerLinkIndexes> links;
+    
     NNet NN;
 
     bool learn = false;

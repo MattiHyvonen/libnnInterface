@@ -2,6 +2,14 @@
 
 #include <sstream>
 
+void drawNeuron(ofPoint P, float size) {
+        ofSetColor(ofColor::white);
+        ofDrawCircle(P, 5);
+        ofSetColor(100, 40, 0);
+        ofDrawCircle(P, 16*size);    
+}
+
+
 std::vector<float> listToNumbers(std::string list) {
     stringstream ss;
     ss.str(list);
@@ -50,8 +58,8 @@ std::vector<std::vector<float> > net::getWeights() {
     std::vector<std::vector<float> > result(outputs.size() );
     std::vector<float> kaikkiPainot(inputs.size() );
         
-    for(int i=0; i < result.size(); i++) {
-        for(int j=0; j<kaikkiPainot.size(); j++) 
+    for(unsigned int i=0; i < result.size(); i++) {
+        for(unsigned int j=0; j<kaikkiPainot.size(); j++) 
             kaikkiPainot[j]= ((float)j/kaikkiPainot.size());
         
         result[i] = kaikkiPainot;
@@ -61,14 +69,14 @@ std::vector<std::vector<float> > net::getWeights() {
 
 
 void ofApp::setInputValues(std::vector<float> values) {
-    int N = inputs.size();
+    unsigned int N = inputs.size();
     if(values.size() < inputs.size() ) N = values.size();
     for(unsigned int i=0; i<N; i++)
         *inputs[i] = values[i];
 }
 
 void ofApp::setOutputValues(std::vector<float> values) {
-    int N = outputs.size();
+    unsigned int N = outputs.size();
     if(values.size() < outputs.size() ) N = values.size();
     for(unsigned int i=0; i<N; i++)
         *outputs[i] = values[i];
@@ -147,25 +155,38 @@ void ofApp::send() {
 void ofApp::setup(){
 
     /* luodaan neural net */
-
-    int outs = 1; //number of outputs
-    int hids = 1; //number of hidden layers
-    int ins = 2; //number of inputs
     
-    NN = NNet(outs, hids);
+    NN = NNet(N_outputs, N_hiddenLayers);
     
-    inputs.resize(ins);
-    for(int i=0; i<ins; i++)
+    //links from hidden layers and the output layer:
+    links.resize(N_hiddenLayers + 1);
+    
+    inputs.resize(N_inputs);
+    for(unsigned int i=0; i<N_inputs; i++)
         inputs[i] = std::make_shared<float>(0);
     
+    //get shared pointers to net's outputs
     outputs = NN.getOutputSignals();
     
     NN.setLearningcurve(0.98, 0.1, 0.5);
 
     NN.linkInput(inputs);
-    NN.linkHidden(1, 3); //args: layer_i, number of neurons to create
     
-    NN.linkOutput();
+    //link layers to previous layers. Return value is a vector< vector<int> > which represents all links in a layer
+    for(unsigned int i=0; i < N_hiddenLayers; i++) {
+        if(i == 0)
+            links[i] = NN.linkHidden(i+1, hiddenLayerSize);
+        else
+            links[i] = NN.linkHidden(i+1, ALL_COMBINATIONS);
+        
+        std::cout << "hidden layer " << i+1 << ": " << links[i].size() << " neurons\n";
+    }
+    
+    links[links.size()-1] = NN.linkOutput();
+    
+    std::cout << "output layer: " << links[links.size()-1].size() << " neurons\n";
+    std::cout << links[links.size()-1][0].size() << " links\n";
+    
     
     //NN.getStats(); //kertoo juttuja
     
@@ -205,10 +226,66 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-    float margin = 60;
+    unsigned int N_layers = N_hiddenLayers + 2;
+    
+    float margin = 20;
+    float row_h = (ofGetHeight() - margin*3) / (N_layers-1);
+    float spacing;
+    float c;
     
     
-    
+    std::vector<ofPoint> previousLayerPoints;
+    std::vector<ofPoint> thisLayerPoints;
+    std::vector<std::vector<float> > layerWeights;
+    //inputs
+    spacing = (ofGetWidth() - margin*2) / (inputs.size()+1);
+    for(unsigned int i=0; i<inputs.size(); i++) {
+        thisLayerPoints.push_back(ofPoint( (i+1) * spacing + margin, margin) );
+        c = 0.5;
+        drawNeuron(thisLayerPoints.back(), c);
+    }
+    //hidden layers & output layer
+    for(unsigned int layer_i=0; layer_i < links.size(); layer_i++) {
+        
+        std::cout << "get weights\n";
+        layerWeights = NN.getWeights(layer_i+1);
+        std::cout << "layer:" << layer_i+1 << ", neurons:" << layerWeights.size() << ", weights:" << layerWeights[0].size() << "\n";
+
+        unsigned int layerSize = links[layer_i].size();
+        
+        previousLayerPoints = thisLayerPoints;
+        thisLayerPoints.resize(layerSize);
+
+        spacing = (ofGetWidth() - margin*2) / (layerSize+1);
+        
+        for(unsigned int neuron_i=0; neuron_i < layerSize; neuron_i++) {
+            if(layerSize > 1)
+                thisLayerPoints[neuron_i] = (ofPoint(neuron_i * spacing + margin + spacing, (layer_i+1) * row_h + margin) );
+            else
+                thisLayerPoints[neuron_i] = (ofPoint(ofGetWidth()/2, (layer_i+1) * row_h + margin) );
+        }
+            
+        
+        for(unsigned int neuron_i=0; neuron_i < layerSize; neuron_i++) {
+            std::vector<int> neuronLinks = links[layer_i][neuron_i];
+            
+            //draw links
+            for(unsigned int link_i = 0; link_i < neuronLinks.size(); link_i++) {
+                ofPoint linkStart = thisLayerPoints[neuron_i];
+                ofPoint linkEnd = previousLayerPoints[neuronLinks[link_i] ];
+                c = 5 * layerWeights[neuron_i][link_i+1]; //bias on layerWeights[...][0]
+                ofSetLineWidth(c);
+                ofDrawLine(linkStart, linkEnd);
+            }
+            
+            //draw point
+            c = 0.5; //TODO: tähän output-arvot
+            drawNeuron(thisLayerPoints[neuron_i], c);
+            
+        }
+        std::cout << "ok\n";
+    }
+
 }
 
 //--------------------------------------------------------------

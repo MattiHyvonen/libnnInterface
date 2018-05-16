@@ -2,7 +2,7 @@
 #include <vector>
 #include <memory>
 
-enum LinkMethod {ALL_COMBINATIONS, EVERY_COMBINATION_OF_TWO, RANDOM};
+enum LinkMethod {ALL_COMBINATIONS, EVERY_COMBINATION_OF_TWO, RANDOM, ONE_SELECTED_AND_ONE_RANDOM};
 typedef std::vector<std::vector<int> > LayerLinkIndexes, *ptr_LayerLinkIndexes;
 /**
  * @class Input
@@ -68,6 +68,7 @@ public:
 	float getCurrentError();
         void setLearningRate(float lr);
         std::vector<float> getInputValues(); 
+        std::vector<float> getWeights();
 };
 
 /**
@@ -90,6 +91,7 @@ public:
         int getLayerSize();
         std::vector<std::shared_ptr<Neuron> >* getLayer();
         void clearErrors ();
+        std::vector<std::vector<float> > getWeights();
 };
 
 class InputLayer : public NLayer{	
@@ -112,8 +114,8 @@ class OutputLayer : public NLayer {
 public:
     OutputLayer();
     OutputLayer(int numOfInputs);
-    void link (std::shared_ptr<NLayer> upperLayer, void* (*method)(std::shared_ptr<NLayer> _upLayer));  // predicate for linker function 
-    void link (std::shared_ptr<NLayer> upperLayer); // link all
+    LayerLinkIndexes link (std::shared_ptr<NLayer> upperLayer, LayerLinkIndexes (*method)(std::shared_ptr<NLayer> _upLayer));  // predicate for linker function 
+    LayerLinkIndexes link (std::shared_ptr<NLayer> upperLayer); // link all
     void back(std::vector<float> desiredOutputs);
 };
 /**
@@ -141,13 +143,14 @@ public:
 	LayerLinkIndexes linkHidden (int layerDepth, LayerLinkIndexes (*method)(NLayer* self, std::shared_ptr<NLayer> _upperLayer));
         LayerLinkIndexes linkHidden (int layerDepth, LinkMethod METHOD = ALL_COMBINATIONS);
         LayerLinkIndexes linkHidden (int layerDepth, int numOfNeurons);
-	void linkOutput (void* (*method)(std::shared_ptr<NLayer> _upperLayer));
-        void linkOutput (); // Default linker, all neurons from upper layer to every output
+	LayerLinkIndexes linkOutput (LayerLinkIndexes (*method)(std::shared_ptr<NLayer> _upperLayer));
+        LayerLinkIndexes linkOutput (); // Default linker, all neurons from upper layer to every output
         void setLearningcurve(float curve, float min, float max);
         float getLearningrate(int depth);
         std::vector<std::shared_ptr<float> > getOutputSignals();
         std::vector<float> getSums();
-        
+	std::vector<std::vector<float> > getWeights(int depth);        
+
 	void forward();
 	void back(std::vector<float> desiredOut);
         std::string getStats();
