@@ -1,0 +1,64 @@
+#N canvas 492 201 575 436 10;
+#X msg 14 204 disconnect;
+#X obj 24 350 netsend -u;
+#X obj 15 36 vsl 15 80 0 1 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 0 1;
+#X obj 35 36 vsl 15 80 0 1 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 0 1;
+#X msg 10 226 bang;
+#X msg 14 179 connect localhost 12346;
+#X obj 265 360 netreceive -u 12345;
+#X obj 33 254 pack f f, f 12;
+#X msg 36 317 send inputs 0 0.0632911;
+#X obj 201 37 vsl 15 80 0 1 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 3732 1;
+#X obj 405 21 vsl 15 80 0 1 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 0 1;
+#X text 19 8 input;
+#X text 197 13 output;
+#X text 421 32 desired output;
+#X msg 370 275 send desiredOutputs 0;
+#X msg 372 247 set send desiredOutputs \$1;
+#X obj 39 393 print;
+#X obj 331 153 tgl 15 0 empty empty learning 17 7 0 10 -262144 -1 -1
+0 1;
+#X msg 31 285 set send inputs \$1 \$2;
+#X obj 292 177 spigot;
+#X obj 292 199 t b b;
+#X obj 275 59 t b b;
+#X obj 138 349 t b b, f 6;
+#X obj 309 7 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1 1
+;
+#X obj 277 36 metro 100;
+#X obj 329 75 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 329 97 t b b;
+#X obj 311 123 del 1000;
+#X connect 0 0 1 0;
+#X connect 2 0 7 0;
+#X connect 3 0 4 0;
+#X connect 3 0 7 1;
+#X connect 4 0 7 0;
+#X connect 5 0 1 0;
+#X connect 6 0 9 0;
+#X connect 7 0 18 0;
+#X connect 8 0 1 0;
+#X connect 8 0 16 0;
+#X connect 10 0 15 0;
+#X connect 14 0 1 0;
+#X connect 15 0 14 0;
+#X connect 17 0 19 1;
+#X connect 18 0 8 0;
+#X connect 19 0 20 0;
+#X connect 20 0 14 0;
+#X connect 20 1 14 0;
+#X connect 21 0 22 0;
+#X connect 21 1 19 0;
+#X connect 22 0 8 0;
+#X connect 22 1 8 0;
+#X connect 23 0 24 0;
+#X connect 24 0 21 0;
+#X connect 25 0 26 0;
+#X connect 26 0 27 0;
+#X connect 26 1 17 0;
+#X connect 27 0 17 0;
