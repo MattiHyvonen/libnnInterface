@@ -17,7 +17,7 @@ typedef std::vector<std::vector<int> > LayerLinkIndexes, *ptr_LayerLinkIndexes;
 class Neuron;
 
 class Input {
-    const float MAX_WEIGHT = 10;
+    const float MAX_WEIGHT = 20;
     std::shared_ptr<float> in;
     std::shared_ptr<Neuron> linkedNeuron;
     float weight;

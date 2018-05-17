@@ -20,7 +20,7 @@ class ofApp : public ofBaseApp{
     unsigned int N_outputs = 1; //number of outputs
     unsigned int N_hiddenLayers = 1; //number of hidden layers
     unsigned int N_inputs = 2; //number of inputs
-    unsigned int hiddenLayerSize = 4; //number of neurons in hidden layers
+    unsigned int hiddenLayerSize = 3; //number of neurons in hidden layers
     
     std::vector<LayerLinkIndexes> links;
     
@@ -42,7 +42,7 @@ public:
     void setInputValues(std::vector<float> values);
     void setOutputValues(std::vector<float> values);
     
-    void receive();
+    bool receive();
     void send();
     
     void setup();

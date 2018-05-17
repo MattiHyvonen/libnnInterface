@@ -158,8 +158,8 @@ float Input::getWeightedInput() {
 
 void Input::setWeight(float w) {
     weight = w;
-    if(weight > MAX_WEIGHT) weight = MAX_WEIGHT;
-    if(weight < -MAX_WEIGHT) weight = -MAX_WEIGHT;
+//    if(weight > MAX_WEIGHT) weight = MAX_WEIGHT;
+//    if(weight < 0) weight = 0;
 }
 
 std::shared_ptr<float> Input::getInput() {
@@ -217,29 +217,25 @@ void Neuron::back(float desiredOut) {
     error = desiredOut - *outputSignal;
     float sigmoidDelta = error * (*outputSignal) * (1 - (*outputSignal));
     for (auto& input : inputs) {
-        if (input.getNeuron()) {
             float weight = input.getWeight();
             input.setWeight(weight + learningRate * sigmoidDelta * (*input.getInput()));
+        if (input.getNeuron()) {
             input.getNeuron()->error += sigmoidDelta * input.getWeight();
-        } else {
-            input.setWeight(1);
-        }
+        } 
     }
 }
 
 void Neuron::back() {
     float sigmoidDelta = (*outputSignal)* (1 - (*outputSignal));
     for (auto& input : inputs) {
-        if (input.getNeuron() ) {
             float weight = input.getWeight();
             float errorDelta = learningRate * sigmoidDelta * error * (*input.getInput());
             input.setWeight(weight + errorDelta);
 
             // add error for next layer except if layer is input layer of input is bias
+        if (input.getNeuron() ) {
             input.getNeuron()->error += errorDelta * input.getWeight();
-        } else {
-            input.setWeight(1);
-        }
+        }        
     }
 }
 
