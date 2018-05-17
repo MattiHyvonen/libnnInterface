@@ -158,6 +158,8 @@ float Input::getWeightedInput() {
 
 void Input::setWeight(float w) {
     weight = w;
+    if(weight > MAX_WEIGHT) weight = MAX_WEIGHT;
+    if(weight < -MAX_WEIGHT) weight = -MAX_WEIGHT;
 }
 
 std::shared_ptr<float> Input::getInput() {
@@ -219,6 +221,8 @@ void Neuron::back(float desiredOut) {
             float weight = input.getWeight();
             input.setWeight(weight + learningRate * sigmoidDelta * (*input.getInput()));
             input.getNeuron()->error += sigmoidDelta * input.getWeight();
+        } else {
+            input.setWeight(1);
         }
     }
 }
@@ -226,13 +230,15 @@ void Neuron::back(float desiredOut) {
 void Neuron::back() {
     float sigmoidDelta = (*outputSignal)* (1 - (*outputSignal));
     for (auto& input : inputs) {
-        if (input.getNeuron()) {
+        if (input.getNeuron() ) {
             float weight = input.getWeight();
             float errorDelta = learningRate * sigmoidDelta * error * (*input.getInput());
             input.setWeight(weight + errorDelta);
 
             // add error for next layer except if layer is input layer of input is bias
             input.getNeuron()->error += errorDelta * input.getWeight();
+        } else {
+            input.setWeight(1);
         }
     }
 }
@@ -298,7 +304,6 @@ std::vector<std::vector<float> > NLayer::getWeights() {
     }
     return result;
 }
-
 std::vector<std::shared_ptr<Neuron> >* NLayer::getLayer() {
     return &layer;
 }
@@ -483,11 +488,10 @@ LayerLinkIndexes NNet::linkHidden(int layerDepth, int numOfNeurons) {
 
     if (layerDepth <= 1) {
         result = hiddenLayers[0]->link(inputLayer, numOfNeurons);
-        hiddenLayers[0]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     } else {
         result = hiddenLayers[layerDepth - 1]->link(hiddenLayers[layerDepth - 2], numOfNeurons);
-        hiddenLayers[layerDepth-1]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     }
+    hiddenLayers[0]->setLearningRate(getLearningrate(layerDepth / hiddenLayers.size() + 2));
     return result;
 
 
@@ -514,8 +518,6 @@ LayerLinkIndexes NNet::linkOutput(LayerLinkIndexes (*method)(std::shared_ptr<NLa
 
 std::vector<std::shared_ptr<float> > NNet::getOutputSignals() {
     std::vector<std::shared_ptr<float> > result;
-    
-    //for each neuron in the output layer, push its output signal to result
     for (auto& neuron : (*outputLayer->getLayer())) {
         result.push_back(neuron->getOutputSignal());
     }
@@ -524,8 +526,8 @@ std::vector<std::shared_ptr<float> > NNet::getOutputSignals() {
 
 std::vector<float> NNet::getSums() {
     std::vector<float> result;
-    for (auto& neuron : ( *outputLayer->getLayer() )) {
-        result.push_back(neuron->getSum() );
+    for (auto& neuron : (*outputLayer->getLayer())) {
+        result.push_back(neuron->getSum());
     }
     return result;
 }
@@ -569,7 +571,7 @@ void NNet::back(std::vector<float> desiredOut) {
     for (int i = hiddenLayers.size() - 1; i >= 0; i--) {
         hiddenLayers[i]->back();
     }
-    //  inputLayer->back();
+    inputLayer->back();
 
 }
 

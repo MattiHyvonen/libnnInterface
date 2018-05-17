@@ -9,21 +9,6 @@
 
 std::vector<float> listToNumbers(std::string list);
 
-
-class net{
-public:
-    net(unsigned int n_ins = 0, unsigned int n_outs = 0);
-
-    std::vector<std::shared_ptr<float> > inputs;
-    std::vector<std::shared_ptr<float> > outputs;
-
-    std::vector< std::vector<int> > getLinks();
-    std::vector< std::vector<float> > getWeights();
-
-    void forward(); //aseta output inputin mukaan
-};
-
-
 class ofApp : public ofBaseApp{
 
     const char* SEND_IP = "127.0.0.1";
@@ -33,9 +18,9 @@ class ofApp : public ofBaseApp{
     const int MAX_PACKET_SIZE = 100000;
     
     unsigned int N_outputs = 1; //number of outputs
-    unsigned int N_hiddenLayers = 2; //number of hidden layers
+    unsigned int N_hiddenLayers = 1; //number of hidden layers
     unsigned int N_inputs = 2; //number of inputs
-    unsigned int hiddenLayerSize = 5; //number of neurons in hidden layers
+    unsigned int hiddenLayerSize = 4; //number of neurons in hidden layers
     
     std::vector<LayerLinkIndexes> links;
     
