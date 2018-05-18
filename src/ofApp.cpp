@@ -37,20 +37,49 @@ void ofApp::setOutputValues(std::vector<float> values) {
         *outputs[i] = values[i];
 }
 
+void ofApp::makeLearnPattern(vector<float> numbers) {
+    int numInputs = inputs.size();
+    int numDesiredOutputs = desiredOutputs.size();
+
+    if (numInputs + numDesiredOutputs != numbers.size()) {
+        std::cerr << "makeLearnPattern: incorrect size of numbers:" << numbers.size() << " / " << numInputs + numDesiredOutputs << "\n";
+    }
+
+    vector<float> inputSamples;
+    vector<float> dOutput;
+
+    vector<float>::iterator cut = numbers.begin() + numInputs;
+
+    std::copy(numbers.begin(), cut, inputSamples.begin());
+    std::copy(cut, numbers.end(), dOutput.begin());
+
+    std::cout << "input samples: ";
+    printNumbers(inputSamples);
+    std::cout << "desired output: ";
+    printNumbers(dOutput);
+
+    patterns.push_back(learnPattern(inputSamples, dOutput));
+}
+
 bool ofApp::receive() {
     //hakee paketin ja muuttaa inputs -pointtereiden arvoja
 
     //paketti voi olla:
     //1) inputs <f> <f> <f> <f> ...
-    //2) learning <1|0>
+    //2) startLearning
+    //2) stpoLearning
     //3) desiredOutputs <f> <f> <f> <f> ...
+    //4) learnPattern <in0> <in1> ... <des0> <des1> ...
+    //5) clearLearnPatterns
+    //6) saveLearnPatterns
+    //7) loadLearnPatterns
 
     //vastaanotetaan paketti. Jos tyhjä, palataan
     char udpData[MAX_PACKET_SIZE];
     std::string packet_str;
     bool result = false;
     for (; udpReceiver.Receive(udpData, MAX_PACKET_SIZE); packet_str = udpData) {
-//        std::cout << "Tuli paketti: \"" << packet_str << "\"\n";
+        //        std::cout << "Tuli paketti: \"" << packet_str << "\"\n";
         if (packet_str == "") continue;
         result = true;
         //luetaan eka sana ja verrataan käskyihin
@@ -64,28 +93,50 @@ bool ofApp::receive() {
             continue;
         }
 
-        if (word == "inputs") {
-            std::vector<float> numbers;
-            for (float f = 0; ss >> f; numbers.push_back(f));
-//            std::cout << "Asetetaan inputit: ";
-//            printNumbers(numbers);
-//            std::cout << "\n";
-            if (numbers.empty()) continue;
-            setInputValues(numbers);
-        }
-        else if (word == "desiredOutputs") {
-            std::vector<float> numbers;
-            for (float f = 0; ss >> f; numbers.push_back(f));
-//            std::cout << "Asetetaan desiredOutputit: ";
-//            printNumbers(numbers);
-//            std::cout << "\n";
-            if (numbers.empty()) continue;
-            desiredOutputs = numbers;
+        if (word == "startLearning") {
             learn = true;
+        } else if (word == "stopLearning") {
+            learn = false;
         }
-        else {
-            std::cout << "Huono käsky: " << word << "\n";
-            continue;
+
+        if (!learn) {
+            if (word == "learnPattern") {
+                std::vector<float> numbers;
+                for (float f = 0; ss >> f; numbers.push_back(f));
+                makeLearnPattern(numbers);
+            } else if (word == "inputs") {
+                std::vector<float> numbers;
+                for (float f = 0; ss >> f; numbers.push_back(f));
+                if (numbers.empty()) continue;
+                setInputValues(numbers);
+            } else if (word == "desiredOutputs") {
+                std::vector<float> numbers;
+                for (float f = 0; ss >> f; numbers.push_back(f));
+                if (numbers.empty()) continue;
+                desiredOutputs = numbers;
+            } else if (word == "clearLearnPatterns") {
+                patterns.clear();
+            } else if (word == "saveLearnPatterns") {
+                ofstream os;
+                os.open ("patterns.bin", ios::out | ios::app | ios::binary);
+                for(auto& pattern : patterns) {
+                    pattern.Write(os);
+                }
+                os.close();
+            } else if (word == "loadLearnPatterns") {
+                ifstream is("patterns.bin");
+                if(is.is_open()) {
+                    while(is.good()) {
+                        patterns.push_back(learnPattern());
+                        patterns.back().Read(is);
+                    }
+                    
+                }
+                is.close();
+            } else {
+                std::cout << "Huono käsky: " << word << "\n";
+                continue;
+            }
         }
     }
     return result;
@@ -168,16 +219,16 @@ void ofApp::setup() {
 void ofApp::update() {
     if (receive()) {
         NN.forward();
-        
-        if (learn) {
-            std::cout << "vertailu: " << *inputs[0] << ", ";
-            std::cout << desiredOutputs[0] << "\n";
-            NN.back(desiredOutputs);
-            learn = false;
-        }
-
         send();
-        
+    }
+
+    if (learn) {
+        for (auto& pattern : patterns) {
+            pattern.placePattern(inputs, &desiredOutputs);
+        }
+        NN.forward();
+        NN.back(desiredOutputs);
+        send();
     }
 }
 
